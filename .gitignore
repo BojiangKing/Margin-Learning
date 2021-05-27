@@ -11,3 +11,5 @@ Desktop.ini
 dist
 build
 test.py
+__pycache__
+.vscode

@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.fftpack import fft,ifft
-from scipy.signal import stft
+from scipy.signal import stft, find_peaks
 import matplotlib.pyplot as plt
 from matplotlib.pylab import mpl
  
@@ -61,8 +61,9 @@ plt.title('STFT',fontsize=9,color='black')
  # 求幅值
 Z = np.abs(stft_y)
 # 如下图所示
-# plt.pcolormesh(t, f, Z, vmin = 0, vmax = Z.mean()*10)
-# plt.plot(half_x,Z,'blue')
+plt.pcolormesh(t, f, Z, vmin = 0, vmax = Z.mean()*10)
+plt.plot(half_x,Z,'blue')
 plt.show()
+
 
 

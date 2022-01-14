@@ -3,6 +3,7 @@ from scipy.fftpack import fft,ifft
 from scipy.signal import stft, find_peaks
 import matplotlib.pyplot as plt
 from matplotlib.pylab import mpl
+from scipy.fftpack.basic import rfft
  
 mpl.rcParams['font.sans-serif'] = ['SimHei']   #显示中文
 mpl.rcParams['axes.unicode_minus']=False       #显示负号
@@ -11,17 +12,20 @@ mpl.rcParams['axes.unicode_minus']=False       #显示负号
 x=np.linspace(0,1,140)      
  
 #设置需要采样的信号，频率分量有200，400和600
-y=7*np.sin(2*np.pi*20*x) + 5*np.sin(2*np.pi*40*x)+3*np.sin(2*np.pi*60*x)
+y=7*np.sin(2*np.pi*20*x) + 5*np.sin(2*np.pi*40*x)+3*np.sin(2*np.pi*60*x)+10
  
-fft_y=fft(y)                          #快速傅里叶变换
+fft_y=fft(y, 140)  
+rfft_y = rfft(y, 140)                        #快速傅里叶变换
  
 N=140
 x = np.arange(N)             # 频率个数
 half_x = x[range(int(N/2))]  #取一半区间
  
 abs_y=np.abs(fft_y)                # 取复数的绝对值，即复数的模(双边频谱)
+abs_ry=np.abs(rfft_y) 
 angle_y=np.angle(fft_y)            #取复数的角度
-normalization_y=abs_y/N            #归一化处理（双边频谱）                              
+normalization_y=abs_y/N            #归一化处理（双边频谱）   
+normalization_ry=abs_ry/N                           
 normalization_half_y = normalization_y[range(int(N/2))]      #由于对称性，只取一半区间（单边频谱）
 # cepstrum
 ceps = ifft(np.log(np.abs(fft_y))).real
@@ -52,7 +56,10 @@ plt.plot(half_x,normalization_half_y,'blue')
 plt.title('单边振幅谱(归一化)',fontsize=9,color='blue')
 
 plt.subplot(247)
-plt.plot(x,ceps,'yellow')
+# plt.plot(x,ceps,'yellow')
+# plt.title('倒频谱',fontsize=9,color='yellow')
+
+plt.plot(x,normalization_ry,'yellow')
 plt.title('倒频谱',fontsize=9,color='yellow')
 
 plt.subplot(248)
@@ -60,9 +67,10 @@ plt.subplot(248)
 plt.title('STFT',fontsize=9,color='black')
  # 求幅值
 Z = np.abs(stft_y)
+print(Z[20], Z[40], Z[60])
 # 如下图所示
-plt.pcolormesh(t, f, Z, vmin = 0, vmax = Z.mean()*10)
-plt.plot(half_x,Z,'blue')
+plt.pcolormesh(t, f[1:], Z[1:], vmin = 0, vmax = Z.mean()*10)
+# plt.plot(half_x,Z,'blue')
 plt.show()
 
 

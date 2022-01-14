@@ -13,3 +13,4 @@ build
 test.py
 __pycache__
 .vscode
+my_*

@@ -9,13 +9,14 @@ from contextlib import ExitStack
 
 X_valid, X_train = X_train_full[:5000], X_train_full[5000:] 
 y_valid, y_train = y_train_full[:5000], y_train_full[5000:]
+
 # 打乱训练集次序
 train_set = tf.data.Dataset.from_tensor_slices((X_train, y_train)).shuffle(len(X_train))
 valid_set = tf.data.Dataset.from_tensor_slices((X_valid, y_valid))
 test_set = tf.data.Dataset.from_tensor_slices((X_test, y_test))
 del X_train_full, y_train_full, X_test, y_test
 del X_valid, X_train, y_valid, y_train
-#%%
+
 # 数据集过于庞大，所以我们有必要将数据存到文件中，即调即用
 BytesList = tf.train.BytesList 
 FloatList = tf.train.FloatList 
@@ -58,9 +59,10 @@ def preprocess(tfrecord):
     image = tf.io.parse_tensor(example["image"], out_type=tf.uint8) 
     #image = tf.io.decode_jpeg(example["image"]) 
     image = tf.reshape(image, shape=[28, 28, 1]) 
+    image /= 255
     image = tf.image.resize(image, [224,224]) # if we want to resize 
-    return image, tf.one_hot(example["label"], depth=10)
-def mnist_dataset(filepaths, n_read_threads=5, shuffle_buffer_size=None, n_parse_threads=5, batch_size=32, cache=True): 
+    return image, example["label"] # tf.one_hot(example["label"], depth=10)
+def mnist_dataset(filepaths, n_read_threads=5, shuffle_buffer_size=None, n_parse_threads=5, batch_size=128, cache=True): 
     dataset = tf.data.TFRecordDataset(filepaths, num_parallel_reads=n_read_threads) 
     if cache: 
         # The first time the dataset is iterated over, 
@@ -79,8 +81,8 @@ test_set = mnist_dataset(test_filepaths)
 keras.backend.clear_session()
 np.random.seed(42)
 tf.random.set_seed(42)
-
-model = keras.models.Sequential([
+def net():
+    return keras.models.Sequential([
         # 这里，我们使用一个11*11的更大窗口来捕捉对象。
         # 同时，步幅为4，以减少输出的高度和宽度。
         # 另外，输出通道的数目远大于LeNet
@@ -111,8 +113,22 @@ model = keras.models.Sequential([
         keras.layers.Dense(10)
     ])
 
-model.summary()
-model.compile(loss="categorical_crossentropy", optimizer="nadam", metrics=["accuracy"]) 
+# model.summary()
+
+def try_gpu(i=0):
+    """Return gpu(i) if exists, otherwise return cpu().
+
+    Defined in :numref:`sec_use_gpu`"""
+    if len(tf.config.experimental.list_physical_devices('GPU')) >= i + 1:
+        return tf.device(f'/GPU:{i}')
+    return tf.device('/CPU:0')
+device = try_gpu()
+device_name = device._device_name
+strategy = tf.distribute.OneDeviceStrategy(device_name)
+with strategy.scope():
+    optimizer = keras.optimizers.SGD(learning_rate=0.01)
+    loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+    model = net()
+    model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy']) 
 # %%
-model.fit(train_set, epochs=5, validation_data=valid_set)
-# %%
+model.fit(train_set, epochs=10, validation_data=valid_set)
